@@ -2,7 +2,24 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+static int lq_mem_oom_countdown = -1;
+static int lq_mem_oom_repeat = 0;
+
+void lq_mem_simulate_oom(int countdown, int repeat) {
+	lq_mem_oom_countdown = countdown;
+	lq_mem_oom_repeat = repeat;
+}
+
 void* lq_alloc(size_t bytes) {
+	if (lq_mem_oom_countdown >= 0) {
+		if (lq_mem_oom_countdown == 0) {
+			if (!lq_mem_oom_repeat) {
+				lq_mem_oom_countdown = -1;
+			}
+			return NULL;
+		}
+		lq_mem_oom_countdown--;
+	}
 	return malloc(bytes);
 }
 

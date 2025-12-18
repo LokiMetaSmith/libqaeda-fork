@@ -60,4 +60,13 @@ void* lq_zero(void *dst, size_t len);
  */
 int lq_cmp(const void *dst, const void *src, size_t len);
 
+/**
+ * @brief Configure OOM simulation.
+ *
+ * @param[in] countdown Number of successful allocations before failure.
+ * @param[in] repeat    If true, fail all subsequent allocations after countdown reaches 0.
+ *                      If false, fail only once when countdown reaches 0.
+ */
+void lq_mem_simulate_oom(int countdown, int repeat);
+
 #endif // LIBQAEDA_MEM_H_
