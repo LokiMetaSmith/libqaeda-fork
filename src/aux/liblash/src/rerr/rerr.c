@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "rerr.h"
 
 #ifdef RERR
@@ -45,6 +46,9 @@ void rerr_init(const char *coreprefix) {
 void rerr_register(int pfx, char *label, void *start) {
 #ifdef RERR
 	pfx >>= 8;
+	if (pfx > RERR_N_PFX) {
+		return;
+	}
 	rerr_pfx[pfx] = label;
 	rerr[pfx] = start;
 #endif
@@ -75,6 +79,12 @@ const char *rerrpfx(int code) {
 	short k;
 	char v;
 	splitcode(code, &k, &v);
+	if (k > RERR_N_PFX) {
+		return "INVALID_PFX";
+	}
+	if (rerr_pfx[k] == NULL) {
+		return "NULL_PFX";
+	}
 	return rerr_pfx[k];
 #else
 	return "";
@@ -136,4 +146,3 @@ char* rerrstr(int code, char *buf) {
 	return 0;
 #endif
 }
-
