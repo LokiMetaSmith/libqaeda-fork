@@ -11,3 +11,5 @@ build/
 *.a
 vgcore.*
 a.out
+src/aux/cwalk/build/
+src/aux/aux_lib/
