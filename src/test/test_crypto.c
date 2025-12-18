@@ -143,7 +143,7 @@ START_TEST(check_signature) {
 	sig = lq_privatekey_sign(pk, data, strlen(data), salt);
 	ck_assert_ptr_null(sig);
 
-	r = lq_privatekey_unlock(pk, passphrase, 32);
+	r = lq_privatekey_unlock(pk, passphrase, passphrase_len);
 	ck_assert_int_eq(r, 0);
 
 	sig = lq_privatekey_sign(pk, digest, 32, salt);
@@ -169,12 +169,12 @@ START_TEST(check_verify) {
 	r = lq_crypto_init(mktempdir(path));
 	ck_assert_int_eq(r, ERR_OK);
 
-	pk = lq_privatekey_new(passphrase, 32);
+	pk = lq_privatekey_new(passphrase, passphrase_len);
 	ck_assert_ptr_nonnull(pk);
 	sig = lq_privatekey_sign(pk, data, strlen(data), salt);
 	ck_assert_ptr_null(sig);
 
-	r = lq_privatekey_unlock(pk, passphrase, 32);
+	r = lq_privatekey_unlock(pk, passphrase, passphrase_len);
 	ck_assert_int_eq(r, 0);
 
 	sig = lq_privatekey_sign(pk, data, strlen(data), salt);

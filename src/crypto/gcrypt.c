@@ -80,6 +80,10 @@ int lq_crypto_init(const char *base) {
 	char *p;
 	char path[LQ_PATH_MAX];
 
+	if (base == NULL) {
+		return debug_logerr(LLOG_ERROR, ERR_FAIL, "base path null");
+	}
+
 	lq_zero(path, LQ_PATH_MAX);
 	if (gpg_version == NULL) {
 		gpg_version = (char*)gcry_check_version(GPG_MIN_VERSION);
@@ -917,7 +921,20 @@ static int sign(struct gpg_store *gpg, const char *data, size_t data_len, const 
 		gcry_sexp_release(msg);
 		return ERR_SIGVALID;
 	}
-	lq_cpy(gpg->last_signature, p, c);
+	if (c > LQ_POINT_LEN) {
+		// Skip leading zeros
+		size_t diff = c - LQ_POINT_LEN;
+		p += diff;
+		c = LQ_POINT_LEN;
+		lq_cpy(gpg->last_signature, p, c);
+	} else if (c < LQ_POINT_LEN) {
+		// Pad with zeros (leading)
+		size_t diff = LQ_POINT_LEN - c;
+		lq_zero(gpg->last_signature, diff);
+		lq_cpy(gpg->last_signature + diff, p, c);
+	} else {
+		lq_cpy(gpg->last_signature, p, c);
+	}
 
 	// retrieve s and write it
 	gcry_sexp_release(pnt);
@@ -936,7 +953,20 @@ static int sign(struct gpg_store *gpg, const char *data, size_t data_len, const 
 		gcry_sexp_release(msg);
 		return ERR_SIGVALID;
 	}
-	lq_cpy(gpg->last_signature + LQ_POINT_LEN, p, c);
+	if (c > LQ_POINT_LEN) {
+		// Skip leading zeros
+		size_t diff = c - LQ_POINT_LEN;
+		p += diff;
+		c = LQ_POINT_LEN;
+		lq_cpy(gpg->last_signature + LQ_POINT_LEN, p, c);
+	} else if (c < LQ_POINT_LEN) {
+		// Pad with zeros (leading)
+		size_t diff = LQ_POINT_LEN - c;
+		lq_zero(gpg->last_signature + LQ_POINT_LEN, diff);
+		lq_cpy(gpg->last_signature + LQ_POINT_LEN + diff, p, c);
+	} else {
+		lq_cpy(gpg->last_signature + LQ_POINT_LEN, p, c);
+	}
 	gcry_sexp_release(pnt);
 	gcry_sexp_release(sig);
 	gcry_sexp_release(msg);
