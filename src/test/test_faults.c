@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "lq/base.h"
 #include "lq/io.h"
@@ -104,6 +106,52 @@ START_TEST(check_store_new_oom) {
 }
 END_TEST
 
+START_TEST(check_file_store_io_errors) {
+	LQStore *store;
+	char path[LQ_PATH_MAX];
+	char key[10] = "testkey";
+	size_t key_len = 7;
+	char val[10] = "val";
+	size_t val_len = 3;
+	char out_val[10];
+	size_t out_len = 10;
+	int r;
+
+	lq_cpy(path, "/tmp/lq_test_store_io_XXXXXX", 30);
+	mktempdir(path);
+	store = lq_store_new(path);
+	ck_assert_ptr_nonnull(store);
+
+	// Test PUT failure (Open)
+	lq_io_simulate_error(0, 0);
+	r = store->put(LQ_CONTENT_RAW, store, key, &key_len, val, val_len);
+	ck_assert_int_eq(r, ERR_NOENT);
+
+	// Test PUT failure (Write)
+	lq_io_simulate_error(1, 0); // 0=open succeeds, 1=write fails
+	r = store->put(LQ_CONTENT_RAW, store, key, &key_len, val, val_len);
+	ck_assert_int_eq(r, ERR_WRITE);
+
+	// Successful PUT for setup
+	lq_io_simulate_error(-1, 0);
+	r = store->put(LQ_CONTENT_RAW, store, key, &key_len, val, val_len);
+	ck_assert_int_eq(r, ERR_OK);
+
+	// Test GET failure (Open)
+	lq_io_simulate_error(0, 0);
+	r = store->get(LQ_CONTENT_RAW, store, key, key_len, out_val, &out_len);
+	ck_assert_int_eq(r, ERR_NOENT);
+
+	// Test GET failure (Read)
+	lq_io_simulate_error(1, 0); // 0=open succeeds, 1=read fails
+	r = store->get(LQ_CONTENT_RAW, store, key, key_len, out_val, &out_len);
+	ck_assert_int_eq(r, ERR_FAIL);
+
+	store->free(store);
+	lq_io_simulate_error(-1, 0);
+}
+END_TEST
+
 Suite * faults_suite(void) {
 	Suite *s;
 	TCase *tc;
@@ -113,6 +161,7 @@ Suite * faults_suite(void) {
 	tcase_add_test(tc, check_oom_allocation);
 	tcase_add_test(tc, check_io_error);
 	tcase_add_test(tc, check_store_new_oom);
+	tcase_add_test(tc, check_file_store_io_errors);
 	suite_add_tcase(s, tc);
 
 	return s;

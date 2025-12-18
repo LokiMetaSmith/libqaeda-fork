@@ -62,7 +62,12 @@ int lq_file_content_get(enum payload_e typ, LQStore *store, const char *key, siz
 	p = value;
 	l = 0;
 	while (1) {
-		c = lq_read(f, p, *value_len - l);
+		int r = lq_read(f, p, *value_len - l);
+		if (r < 0) {
+			lq_close(f);
+			return ERR_FAIL; // Or generic IO error?
+		}
+		c = (size_t)r;
 		if (c == 0) {
 			break;
 		}
@@ -109,11 +114,12 @@ int lq_file_content_put(enum payload_e typ, LQStore *store, const char *key, siz
 	l = value_len;
 	p = value;
 	while (l > 0) {
-		c = write(f, p, l);
-		if (c < 0) {
+		int r = lq_write(f, p, l);
+		if (r < 0) {
 			lq_close(f);
 			return ERR_WRITE;
 		}
+		c = (size_t)r;
 		if (c == 0) {
 			break;
 		}
