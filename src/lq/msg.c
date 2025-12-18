@@ -26,10 +26,17 @@ LQMsg* lq_msg_new(const char *msg_data, size_t msg_len) {
 	LQMsg *msg;
 
 	msg = lq_alloc(sizeof(LQMsg));
+	if (msg == NULL) {
+		return NULL;
+	}
 	lq_zero(msg, sizeof(LQMsg));
 	clock_gettime(CLOCK_REALTIME, &msg->time);
 
 	msg->data = lq_alloc(msg_len);
+	if (msg->data == NULL) {
+		lq_free(msg);
+		return NULL;
+	}
 	lq_cpy(msg->data, msg_data, msg_len);
 	msg->len = msg_len;
 	msg->state = LQ_MSG_INIT;
