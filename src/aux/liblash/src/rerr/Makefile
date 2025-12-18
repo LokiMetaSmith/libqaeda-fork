@@ -1,7 +1,7 @@
 OBJS := $(patsubst %.c,%.o,$(filter-out test.c,$(wildcard *.c)))
 SOBJS := $(patsubst %.c,%.so.o,$(filter-out test.c,$(wildcard *.c)))
 INCLUDES := -I.
-CFLAGS += $(INCLUDES) -DRERR -DRERR_N_PFX=2
+CFLAGS += $(INCLUDES) -DRERR -DRERR_N_PFX=8
 VERSION = 0.0.1
 
 all: $(OBJS)

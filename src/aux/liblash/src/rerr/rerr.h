@@ -20,7 +20,7 @@ enum err_base_e {
 };
 
 #ifndef RERR_N_PFX 
-#define RERR_N_PFX 0
+#define RERR_N_PFX 8
 #endif
 
 #ifndef RERR_NOTFOUND_RESPONSE
