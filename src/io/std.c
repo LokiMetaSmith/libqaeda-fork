@@ -24,15 +24,40 @@ char *ensuredir(char *s) {
 	return s;
 }
 
+static int lq_io_error_countdown = -1;
+static int lq_io_error_repeat = 0;
+
+void lq_io_simulate_error(int countdown, int repeat) {
+	lq_io_error_countdown = countdown;
+	lq_io_error_repeat = repeat;
+}
+
+static int lq_io_check_fail(void) {
+	if (lq_io_error_countdown >= 0) {
+		if (lq_io_error_countdown == 0) {
+			if (!lq_io_error_repeat) {
+				lq_io_error_countdown = -1;
+			}
+			errno = EIO;
+			return 1;
+		}
+		lq_io_error_countdown--;
+	}
+	return 0;
+}
+
 int lq_open(const char *pathname, int flags, int mode) {
+	if (lq_io_check_fail()) return -1;
 	return open(pathname, flags, (mode_t)mode);
 }
 
 int lq_read(int f, void *buf, size_t c) {
+	if (lq_io_check_fail()) return -1;
 	return read(f, buf, c);
 }
 
 int lq_write(int f, void *buf, size_t c) {
+	if (lq_io_check_fail()) return -1;
 	return write(f, buf, c);
 }
 

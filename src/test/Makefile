@@ -20,6 +20,7 @@ all-tests:
 	CK_FORK=no LD_LIBRARY_PATH=`realpath ../aux/lib` ./test_trust_bin
 	CK_FORK=no LD_LIBRARY_PATH=`realpath ../aux/lib` ./test_store_bin
 	CK_FORK=no LD_LIBRARY_PATH=`realpath ../aux/lib` ./test_query_bin
+	CK_FORK=no LD_LIBRARY_PATH=`realpath ../aux/lib` ./test_faults_bin
 
 one-test: build
 	CK_FORK=no LD_LIBRARY_PATH=`realpath ../aux/lib` ./test_cert_bin
@@ -41,6 +42,7 @@ build:
 	$(CC) $(CFLAGS) test_trust.c -o test_trust_bin $(COMMONOBJS) $(LDFLAGS)
 	$(CC) $(CFLAGS) test_store.c -o test_store_bin $(COMMONOBJS) $(LDFLAGS) -lgcrypt
 	$(CC) $(CFLAGS) test_query.c -o test_query_bin $(COMMONOBJS) $(LDFLAGS) -lgcrypt
+	$(CC) $(CFLAGS) test_faults.c -o test_faults_bin $(COMMONOBJS) $(LDFLAGS) -lgcrypt
 
 clean:
 	rm -vf test_*_bin
