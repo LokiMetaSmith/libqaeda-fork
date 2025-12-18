@@ -18,8 +18,8 @@
 char* mktempdir(char *s);
 char* ensuredir(char *s);
 int lq_open(const char *pathname, int flags, int mode);
-int lq_read(int f, char *buf, int c);
-int lq_write(int f, char *buf, int c);
+int lq_read(int f, char *buf, size_t c);
+int lq_write(int f, char *buf, size_t c);
 
 /**
  * @brief Configure I/O error simulation.
