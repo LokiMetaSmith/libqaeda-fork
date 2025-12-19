@@ -227,17 +227,20 @@ int lq_query_next(LQQuery *query) {
 	char *p;
 	//char b[LQ_STORE_KEY_MAX];
 
+	testcase(query->state & LQ_QUERY_EOF);
 	if (query->state & LQ_QUERY_EOF) {
 		return ERR_EOF;	
 	}
 	p = *(query->files + query->files_cur) + 1;
 	query->key_len = h2b(p, (char*)query->key);
+	testcase(query->key_len == 0);
 	if (query->key_len == 0) {
 		query->state = LQ_QUERY_GONER;
 		return ERR_ENCODING;
 	}
 	query->value_len = LQ_STORE_VAL_MAX;
 	r = query->store->get(query->typ, query->store, query->key, query->key_len, query->value, &query->value_len);
+	testcase(r != ERR_OK);
 	if (r != ERR_OK) {
 		query->value_len = 0;
 		query->state = LQ_QUERY_GONER;
