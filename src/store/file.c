@@ -25,6 +25,7 @@ int lq_file_content_count(enum payload_e typ, LQStore *store, const char *key, s
 	char pfx[1024];
 
 	out = lq_alloc(sizeof(char**) * LQ_DIRS_MAX);
+	testcase(out == NULL);
 	if (out == NULL) {
 		return ERR_MEM;
 	}
@@ -66,6 +67,7 @@ int lq_file_content_get(enum payload_e typ, LQStore *store, const char *key, siz
 	l = 0;
 	while (1) {
 		int r = lq_read(f, p, *value_len - l);
+		testcase(r < 0);
 		if (r < 0) {
 			lq_close(f);
 			return ERR_FAIL; // Or generic IO error?
@@ -118,6 +120,7 @@ int lq_file_content_put(enum payload_e typ, LQStore *store, const char *key, siz
 	p = value;
 	while (l > 0) {
 		int r = lq_write(f, p, l);
+		testcase(r < 0);
 		if (r < 0) {
 			lq_close(f);
 			return ERR_WRITE;
@@ -173,11 +176,13 @@ LQQuery* lq_query_new(enum payload_e typ, LQStore *store, const char *key, size_
 	char pfx[1024];
 
 	query = lq_alloc(sizeof(LQQuery));
+	testcase(query == NULL);
 	if (query == NULL) {
 		return NULL;
 	}
 	lq_zero(query, sizeof(LQQuery));
 	query->files = lq_alloc(sizeof(char**) * LQ_DIRS_MAX);
+	testcase(query->files == NULL);
 	if (query->files == NULL) {
 		lq_free(query);
 		return NULL;
@@ -195,12 +200,14 @@ LQQuery* lq_query_new(enum payload_e typ, LQStore *store, const char *key, size_
 		return NULL;
 	}
 	query->value = lq_alloc(LQ_STORE_VAL_MAX);
+	testcase(query->value == NULL);
 	if (query->value == NULL) {
 		lq_free(query->files);
 		lq_free(query);
 		return NULL;
 	}
 	query->key = lq_alloc(LQ_STORE_KEY_MAX);
+	testcase(query->key == NULL);
 	if (query->key == NULL) {
 		lq_free(query->value);
 		lq_free(query->files);

@@ -26,6 +26,7 @@ LQMsg* lq_msg_new(const char *msg_data, size_t msg_len) {
 	LQMsg *msg;
 
 	msg = lq_alloc(sizeof(LQMsg));
+	testcase(msg == NULL);
 	if (msg == NULL) {
 		return NULL;
 	}
@@ -33,6 +34,7 @@ LQMsg* lq_msg_new(const char *msg_data, size_t msg_len) {
 	clock_gettime(CLOCK_REALTIME, &msg->time);
 
 	msg->data = lq_alloc(msg_len);
+	testcase(msg->data == NULL);
 	if (msg->data == NULL) {
 		lq_free(msg);
 		return NULL;
