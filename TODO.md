@@ -11,4 +11,5 @@
 - [x] Create `test_faults.c` to verify library behavior under simulated faults.
 - [x] Integrate new tests into the build system.
 - [x] Add OOM coverage for core objects (`LQMsg`, `LQCert`, `LQEnvelope`).
-- [ ] Run coverage analysis to identify remaining untested branches.
+- [x] Add OOM coverage for `src/crypto` (gcrypt and dummy) and `src/lq/config`.
+- [x] Run coverage analysis to identify remaining untested branches.

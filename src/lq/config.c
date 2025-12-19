@@ -59,6 +59,12 @@ int lq_config_init() {
 		return ERR_MEM;
 	}
 	config_idx = lq_alloc(LQ_CONFIG_MAX * sizeof(char**));
+	if (config_idx == NULL) {
+		lq_free(config.typs);
+		lq_free(config.members);
+		lq_free(config.mem);
+		return ERR_MEM;
+	}
 	config.last = 0;
 	config.len = 0;
 	config.cap = LQ_CONFIG_MEMCAP;
