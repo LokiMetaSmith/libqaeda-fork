@@ -25,11 +25,13 @@ static struct lq_attach *lq_attach_new() {
 static struct lq_attach *lq_attach_add(struct lq_attach *attach, const char *data, size_t data_len) {
 	attach->len = data_len;
 	attach->data = lq_alloc(data_len);
+	testcase(attach->data == NULL);
 	if (attach->data == NULL) {
 		return NULL;
 	}
 	lq_cpy(attach->data, data, data_len);
 	attach->next = lq_alloc(sizeof(struct lq_attach));
+	testcase(attach->next == NULL);
 	if (attach->next == NULL) {
 		lq_free(attach->data);
 		return NULL;
@@ -68,12 +70,14 @@ LQEnvelope *lq_envelope_new(LQCert *cert, int hint) {
 	LQEnvelope *env;
 
 	env = lq_alloc(sizeof(LQEnvelope));
+	testcase(env == NULL);
 	if (env == NULL) {
 		return NULL;
 	}
 	env->hint = hint;
 	env->cert = cert;
 	env->attach_start = lq_attach_new();
+	testcase(env->attach_start == NULL);
 	if (env->attach_start == NULL) {
 		lq_free(env);
 		return NULL;

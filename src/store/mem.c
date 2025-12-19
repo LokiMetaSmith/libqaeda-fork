@@ -108,13 +108,28 @@ int lq_mem_content_put(enum payload_e typ, LQStore *store, const char *key, size
 	o = lq_mem_init(store);
 	
 	v = lq_alloc(sizeof(struct pair_t));
+	testcase(v == NULL);
+	if (v == NULL) {
+		return ERR_MEM;
+	}
 
 	path[0] = (char)typ;
 	lq_cpy(path+1, key, *key_len);
 	v->key = lq_alloc(LQ_STORE_KEY_MAX);
+	testcase(v->key == NULL);
+	if (v->key == NULL) {
+		lq_free(v);
+		return ERR_MEM;
+	}
 	v->key_len = *key_len + 1;
 	lq_cpy(v->key, path, v->key_len);
 	v->val = lq_alloc(LQ_STORE_VAL_MAX);
+	testcase(v->val == NULL);
+	if (v->val == NULL) {
+		lq_free(v->key);
+		lq_free(v);
+		return ERR_MEM;
+	}
 	v->val_len = value_len;
 	lq_cpy(v->val, value, value_len);
 
@@ -153,6 +168,10 @@ LQStore* lq_store_new(const char *spec) {
 
 	debug(LLOG_DEBUG, "store.mem", "ignoring spec in mem store init");
 	store = lq_alloc(sizeof(LQStore));
+	testcase(store == NULL);
+	if (store == NULL) {
+		return NULL;
+	}
 	lq_cpy(store, &LQMemContent, sizeof(LQMemContent));
 	store->userdata = NULL;
 	return store;

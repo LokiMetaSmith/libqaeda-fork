@@ -4,6 +4,7 @@
 #include "lq/store.h"
 #include "lq/err.h"
 #include "lq/mem.h"
+#include "debug.h"
 
 
 int lq_trust_check(LQPubKey *pubkey, LQStore *store, enum trust_mode_e mode, const unsigned char *flags) {
@@ -26,10 +27,12 @@ int lq_trust_check(LQPubKey *pubkey, LQStore *store, enum trust_mode_e mode, con
 	keylen = lq_publickey_bytes(pubkey, &keydata);
 	//r = store->get(LQ_CONTENT_KEY, store, keydata, keylen, (char*)key_flags, &l);
 	r = store->get(LQ_CONTENT_KEY_PUBLIC, store, keydata, keylen, (char*)key_flags, &l);
+	testcase(r != ERR_OK);
 	if (r != ERR_OK) {
 		return -1;
 	}
 
+	testcase(mode == TRUST_MATCH_NONE);
 	if (mode == TRUST_MATCH_NONE || LQ_TRUST_FLAG_BITS == 0) {
 		return 1000000;
 	}
@@ -55,12 +58,14 @@ int lq_trust_check(LQPubKey *pubkey, LQStore *store, enum trust_mode_e mode, con
 			}
 		}
 		if (match > 0) {
+			testcase(mode == TRUST_MATCH_ONE);
 			if (mode == TRUST_MATCH_ONE) {
 				return 1000000;
 			}
 		}
 		m >>= 1;
 	}
+	testcase(mode == TRUST_MATCH_ALL);
 	if (mode == TRUST_MATCH_ALL) { 
 		if (match != match_req) {
 			return 0;

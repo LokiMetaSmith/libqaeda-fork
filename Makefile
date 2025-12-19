@@ -7,6 +7,9 @@ lib:
 test: all
 	make -C src test
 
+coverage:
+	make -C src/test coverage
+
 clean:
 	make -C src clean
 

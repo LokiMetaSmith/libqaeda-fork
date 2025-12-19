@@ -597,10 +597,12 @@ static LQPrivKey* privatekey_alloc(const char *passphrase, size_t passphrase_len
 
 	// Allocate private key structures.
 	o = lq_alloc(sizeof(LQPrivKey));
+	testcase(o == NULL);
 	if (o == NULL) {
 		return NULL;
 	}
 	gpg = lq_alloc(sizeof(struct gpg_store));
+	testcase(gpg == NULL);
 	if (gpg == NULL) {
 		lq_free(o);
 		return NULL;
@@ -787,11 +789,13 @@ LQPrivKey* lq_privatekey_load(const char *passphrase, size_t passphrase_len, con
 	int r;
 	
 	pk = lq_alloc(sizeof(LQPrivKey));
+	testcase(pk == NULL);
 	if (pk == NULL) {
 		debug_logerr(LLOG_ERROR, ERR_KEYFAIL, "allocate object");
 		return NULL;
 	}
 	pk->impl = (struct gpg_store*)lq_alloc(sizeof(struct gpg_store));
+	testcase(pk->impl == NULL);
 	if (pk->impl == NULL) {
 		lq_free(pk);
 		debug_logerr(LLOG_ERROR, ERR_KEYFAIL, "allocate internal structure");
@@ -992,16 +996,19 @@ LQSig* lq_privatekey_sign(LQPrivKey *pk, const char *data, size_t data_len, cons
 	}
 
 	sig = lq_alloc(sizeof(LQSig));
+	testcase(sig == NULL);
 	if (sig == NULL) {
 		return NULL;
 	}
 	lq_zero(sig, sizeof(LQSig));
 	sig->pubkey = lq_publickey_from_privatekey(pk);
+	testcase(sig->pubkey == NULL);
 	if (sig->pubkey == NULL) {
 		lq_free(sig);
 		return NULL;
 	}
 	sig->impl = lq_alloc(LQ_SIGN_LEN);
+	testcase(sig->impl == NULL);
 	if (sig->impl == NULL) {
 		lq_signature_free(sig);
 		return NULL;
@@ -1020,11 +1027,13 @@ LQSig* lq_signature_from_bytes(const char *sig_data, size_t sig_len, LQPubKey *p
 	}
 
 	sig = lq_alloc(sizeof(LQSig));
+	testcase(sig == NULL);
 	if (sig == NULL) {
 		return NULL;
 	}
 	lq_zero(sig, sizeof(LQSig));
 	sig->impl = lq_alloc(LQ_SIGN_LEN);
+	testcase(sig->impl == NULL);
 	if (sig->impl == NULL) {
 		lq_free(sig);
 		return NULL;
@@ -1192,6 +1201,7 @@ LQPubKey* lq_publickey_new(const char *full) {
 	struct gpg_store *gpg;
 
 	gpg = lq_alloc(sizeof(struct gpg_store));
+	testcase(gpg == NULL);
 	if (gpg == NULL) {
 		return NULL;
 	}
@@ -1199,6 +1209,7 @@ LQPubKey* lq_publickey_new(const char *full) {
 	lq_cpy(gpg->public_key, full, LQ_PUBKEY_LEN);
 
 	pubk = lq_alloc(sizeof(LQPubKey));
+	testcase(pubk == NULL);
 	if (pubk == NULL) {
 		lq_free(gpg);
 		return NULL;
