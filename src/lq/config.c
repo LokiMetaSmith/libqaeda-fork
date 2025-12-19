@@ -44,21 +44,25 @@ static int core_register() {
 
 int lq_config_init() {
 	config.mem = lq_alloc(LQ_CONFIG_MEMCAP);
+	testcase(config.mem == NULL);
 	if (config.mem == NULL) {
 		return ERR_MEM;
 	}
 	config.members = lq_alloc(LQ_CONFIG_MAX * sizeof(void**));
+	testcase(config.members == NULL);
 	if (config.members == NULL) {
 		lq_free(config.mem);
 		return ERR_MEM;
 	}
 	config.typs = lq_alloc(LQ_CONFIG_MAX * sizeof(void*));
+	testcase(config.typs == NULL);
 	if (config.typs == NULL) {
 		lq_free(config.members);
 		lq_free(config.mem);
 		return ERR_MEM;
 	}
 	config_idx = lq_alloc(LQ_CONFIG_MAX * sizeof(char**));
+	testcase(config_idx == NULL);
 	if (config_idx == NULL) {
 		lq_free(config.typs);
 		lq_free(config.members);

@@ -1,10 +1,13 @@
 #include "lq/ctx.h"
 #include "lq/mem.h"
 
+#include "debug.h"
+
 LQCtx* lq_ctx_new() {
 	LQCtx *ctx;
 
 	ctx = lq_alloc(sizeof(LQCtx));
+	testcase(ctx == NULL);
 	return ctx;
 }
 
