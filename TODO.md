@@ -13,3 +13,5 @@
 - [x] Add OOM coverage for core objects (`LQMsg`, `LQCert`, `LQEnvelope`).
 - [x] Add OOM coverage for `src/crypto` (gcrypt and dummy) and `src/lq/config`.
 - [x] Run coverage analysis to identify remaining untested branches.
+- [ ] Utilize `ALWAYS`, `NEVER`, `testcase` macros in codebase.
+- [ ] Add `coverage` target to root Makefile and automate reports.
