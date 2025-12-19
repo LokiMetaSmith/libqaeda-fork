@@ -12,6 +12,8 @@
 #include "lq/msg.h"
 #include "lq/cert.h"
 #include "lq/envelope.h"
+#include "lq/config.h"
+#include "lq/crypto.h"
 
 START_TEST(check_oom_allocation) {
 	void *ptr;
@@ -215,6 +217,63 @@ START_TEST(check_envelope_new_oom) {
 }
 END_TEST
 
+START_TEST(check_config_init_oom) {
+	int r;
+
+	// Fail various allocs in config_init
+	lq_mem_simulate_oom(0, 0);
+	r = lq_config_init();
+	ck_assert_int_eq(r, ERR_MEM);
+
+	lq_mem_simulate_oom(1, 0);
+	r = lq_config_init();
+	ck_assert_int_eq(r, ERR_MEM);
+
+	lq_mem_simulate_oom(2, 0);
+	r = lq_config_init();
+	ck_assert_int_eq(r, ERR_MEM);
+
+	lq_mem_simulate_oom(3, 0);
+	r = lq_config_init();
+	ck_assert_int_eq(r, ERR_MEM);
+
+	lq_mem_simulate_oom(-1, 0);
+}
+END_TEST
+
+START_TEST(check_crypto_oom) {
+	LQPrivKey *pk;
+	LQPubKey *pubk;
+	char *pk_bytes;
+
+	// Private key new
+	lq_mem_simulate_oom(0, 0);
+	pk = lq_privatekey_new("pass", 4);
+	ck_assert_ptr_null(pk);
+
+	lq_mem_simulate_oom(1, 0);
+	pk = lq_privatekey_new("pass", 4);
+	ck_assert_ptr_null(pk);
+
+	// Public key new
+	lq_mem_simulate_oom(-1, 0);
+	pk = lq_privatekey_new("pass", 4); // Need a valid one to get bytes
+	ck_assert_ptr_nonnull(pk);
+	lq_privatekey_bytes(pk, &pk_bytes);
+
+	lq_mem_simulate_oom(0, 0);
+	pubk = lq_publickey_new(pk_bytes);
+	ck_assert_ptr_null(pubk);
+
+	lq_mem_simulate_oom(1, 0);
+	pubk = lq_publickey_new(pk_bytes);
+	ck_assert_ptr_null(pubk);
+
+	lq_privatekey_free(pk);
+	lq_mem_simulate_oom(-1, 0);
+}
+END_TEST
+
 Suite * faults_suite(void) {
 	Suite *s;
 	TCase *tc;
@@ -228,6 +287,8 @@ Suite * faults_suite(void) {
 	tcase_add_test(tc, check_msg_new_oom);
 	tcase_add_test(tc, check_cert_new_oom);
 	tcase_add_test(tc, check_envelope_new_oom);
+	tcase_add_test(tc, check_config_init_oom);
+	tcase_add_test(tc, check_crypto_oom);
 	suite_add_tcase(s, tc);
 
 	return s;

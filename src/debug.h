@@ -1,6 +1,17 @@
 #ifndef MORGEL_H_
 #define MORGEL_H_
 
+#ifdef COVERAGE_TEST
+  #define ALWAYS(x) (1)
+  #define NEVER(x) (0)
+  #define testcase(x) if(x){}
+#else
+  #include <assert.h>
+  #define ALWAYS(x) ((x)?1:(assert(0),0))
+  #define NEVER(x) ((x)?(assert(0),1):0)
+  #define testcase(x) ((void)0)
+#endif
+
 /**
  * \brief Data type indicator for the structured log.
  *

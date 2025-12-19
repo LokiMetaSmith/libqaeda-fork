@@ -6,6 +6,10 @@ LIBS := ../asn1/defs_asn1_tab.o -L.. -L../aux/lib -lqaeda -lhashmap $(shell pkg-
 LDFLAGS := -lcheck -lsubunit -lm $(LIBS)
 COMMONOBJS = ../mem/std.o ../lq/config.o ../lq/err.o ../lq/base.o ../debug.o
 
+coverage: CFLAGS += -fprofile-arcs -ftest-coverage -DCOVERAGE_TEST
+coverage: LDFLAGS += -fprofile-arcs -ftest-coverage
+coverage: build all-tests
+
 all: build all-tests
 #all: build one-test
 

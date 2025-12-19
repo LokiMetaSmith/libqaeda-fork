@@ -25,6 +25,9 @@ int lq_file_content_count(enum payload_e typ, LQStore *store, const char *key, s
 	char pfx[1024];
 
 	out = lq_alloc(sizeof(char**) * LQ_DIRS_MAX);
+	if (out == NULL) {
+		return ERR_MEM;
+	}
 	pfx[0] = (char)typ + 0x30;
 	b2h((const unsigned char*)key, (int)key_len, (unsigned char*)buf);
 	lq_cpy(pfx+1, buf, strlen(buf));
@@ -170,8 +173,15 @@ LQQuery* lq_query_new(enum payload_e typ, LQStore *store, const char *key, size_
 	char pfx[1024];
 
 	query = lq_alloc(sizeof(LQQuery));
+	if (query == NULL) {
+		return NULL;
+	}
 	lq_zero(query, sizeof(LQQuery));
 	query->files = lq_alloc(sizeof(char**) * LQ_DIRS_MAX);
+	if (query->files == NULL) {
+		lq_free(query);
+		return NULL;
+	}
 	pfx[0] = (char)typ + 0x30;
 	b2h((const unsigned char*)key, (int)key_len, (unsigned char*)buf);
 	lq_cpy(pfx+1, buf, strlen(buf) + 1);
@@ -180,10 +190,23 @@ LQQuery* lq_query_new(enum payload_e typ, LQStore *store, const char *key, size_
 	query->typ = typ;
 	query->files_len = query_list(store->userdata, query->files, LQ_DIRS_MAX, pfx, key_len + 1);
 	if (query->files_len == 0) {
+		lq_free(query->files);
+		lq_free(query);
 		return NULL;
 	}
 	query->value = lq_alloc(LQ_STORE_VAL_MAX);
+	if (query->value == NULL) {
+		lq_free(query->files);
+		lq_free(query);
+		return NULL;
+	}
 	query->key = lq_alloc(LQ_STORE_KEY_MAX);
+	if (query->key == NULL) {
+		lq_free(query->value);
+		lq_free(query->files);
+		lq_free(query);
+		return NULL;
+	}
 	query->store = store;
 	query->state = LQ_QUERY_READY;
 

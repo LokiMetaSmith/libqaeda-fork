@@ -105,8 +105,20 @@ LQPrivKey* lq_privatekey_new(const char *passphrase, size_t passphrase_len) {
 	struct dummycrypto *o;
 
 	o = lq_alloc(sizeof(struct dummycrypto));
+	if (o == NULL) {
+		return NULL;
+	}
 	pk = lq_alloc(sizeof(LQPrivKey));
+	if (pk == NULL) {
+		lq_free(o);
+		return NULL;
+	}
 	o->data = lq_alloc(LQ_PRIVKEY_LEN);
+	if (o->data == NULL) {
+		lq_free(pk);
+		lq_free(o);
+		return NULL;
+	}
 	fill_random(o->data, LQ_PRIVKEY_LEN);
 	o->len = LQ_PRIVKEY_LEN;
 	pk->impl = o;
@@ -131,9 +143,21 @@ LQPubKey* lq_publickey_new(const char *full) {
 	struct dummycrypto *o;
 
 	o = lq_alloc(sizeof(struct dummycrypto));
+	if (o == NULL) {
+		return NULL;
+	}
 	pubk = lq_alloc(sizeof(LQPubKey));
+	if (pubk == NULL) {
+		lq_free(o);
+		return NULL;
+	}
 	pubk->pk = 0;
 	o->data = lq_alloc(65);
+	if (o->data == NULL) {
+		lq_free(pubk);
+		lq_free(o);
+		return NULL;
+	}
 	lq_cpy(o->data, full, 65);
 	o->len = 65;
 	pubk->impl = o;
@@ -152,9 +176,21 @@ LQPubKey* lq_publickey_from_privatekey(LQPrivKey *pk) {
 	struct dummycrypto *opk;
 
 	o = lq_alloc(sizeof(struct dummycrypto));
+	if (o == NULL) {
+		return NULL;
+	}
 	pubk = lq_alloc(sizeof(LQPubKey));
+	if (pubk == NULL) {
+		lq_free(o);
+		return NULL;
+	}
 	pubk->pk = pk;
 	o->data = lq_alloc(65);
+	if (o->data == NULL) {
+		lq_free(pubk);
+		lq_free(o);
+		return NULL;
+	}
 	o->len = 65;
 	opk = (struct dummycrypto*)pubk->pk->impl;
 	for (i = 0; i < 64; i++) {
@@ -197,11 +233,28 @@ LQSig* lq_privatekey_sign(LQPrivKey *pk, const char *msg, size_t msg_len, const 
 	}
 
 	sig = lq_alloc(sizeof(LQSig));
+	if (sig == NULL) {
+		return NULL;
+	}
+	lq_zero(sig, sizeof(LQSig));
 	sig->pubkey = lq_publickey_from_privatekey(pk);
+	if (sig->pubkey == NULL) {
+		lq_free(sig);
+		return NULL;
+	}
 
 	o = lq_alloc(sizeof(struct dummycrypto));
+	if (o == NULL) {
+		lq_signature_free(sig);
+		return NULL;
+	}
 	o->len = msg_len * 2 + 1;
 	o->data = lq_alloc(o->len);
+	if (o->data == NULL) {
+		lq_free(o);
+		lq_signature_free(sig);
+		return NULL;
+	}
 
 	for (i = 0; i < msg_len; i++) {
 		src = msg + i;
@@ -236,8 +289,20 @@ LQSig* lq_signature_from_bytes(const char *sig_data, size_t sig_len, LQPubKey *p
 		return NULL;
 	}
 	o = lq_alloc(sizeof(struct dummycrypto));
+	if (o == NULL) {
+		return NULL;
+	}
 	sig = lq_alloc(sizeof(LQSig));
+	if (sig == NULL) {
+		lq_free(o);
+		return NULL;
+	}
 	o->data = lq_alloc(sig_len);
+	if (o->data == NULL) {
+		lq_free(sig);
+		lq_free(o);
+		return NULL;
+	}
 	lq_cpy(o, sig_data, sig_len);
 	sig->impl = o;
 	sig->pubkey = pubkey;
