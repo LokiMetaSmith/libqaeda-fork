@@ -9,6 +9,9 @@
 #include "lq/io.h"
 #include "lq/mem.h"
 #include "lq/store.h"
+#include "lq/msg.h"
+#include "lq/cert.h"
+#include "lq/envelope.h"
 
 START_TEST(check_oom_allocation) {
 	void *ptr;
@@ -152,6 +155,66 @@ START_TEST(check_file_store_io_errors) {
 }
 END_TEST
 
+START_TEST(check_msg_new_oom) {
+	LQMsg *msg;
+	const char *data = "testdata";
+	size_t len = 8;
+
+	// 1. Fail first alloc (structure)
+	lq_mem_simulate_oom(0, 0);
+	msg = lq_msg_new(data, len);
+	ck_assert_ptr_null(msg);
+
+	// 2. Fail second alloc (data)
+	lq_mem_simulate_oom(1, 0);
+	msg = lq_msg_new(data, len);
+	ck_assert_ptr_null(msg);
+
+	// 3. Success
+	lq_mem_simulate_oom(-1, 0);
+	msg = lq_msg_new(data, len);
+	ck_assert_ptr_nonnull(msg);
+	lq_msg_free(msg);
+}
+END_TEST
+
+START_TEST(check_cert_new_oom) {
+	LQCert *cert;
+
+	// 1. Fail first alloc
+	lq_mem_simulate_oom(0, 0);
+	cert = lq_certificate_new(NULL);
+	ck_assert_ptr_null(cert);
+
+	// 2. Success
+	lq_mem_simulate_oom(-1, 0);
+	cert = lq_certificate_new(NULL);
+	ck_assert_ptr_nonnull(cert);
+	lq_certificate_free(cert);
+}
+END_TEST
+
+START_TEST(check_envelope_new_oom) {
+	LQEnvelope *env;
+
+	// 1. Fail first alloc (structure)
+	lq_mem_simulate_oom(0, 0);
+	env = lq_envelope_new(NULL, 0);
+	ck_assert_ptr_null(env);
+
+	// 2. Fail second alloc (attach structure in new())
+	lq_mem_simulate_oom(1, 0);
+	env = lq_envelope_new(NULL, 0);
+	ck_assert_ptr_null(env);
+
+	// 3. Success
+	lq_mem_simulate_oom(-1, 0);
+	env = lq_envelope_new(NULL, 0);
+	ck_assert_ptr_nonnull(env);
+	lq_envelope_free(env);
+}
+END_TEST
+
 Suite * faults_suite(void) {
 	Suite *s;
 	TCase *tc;
@@ -162,6 +225,9 @@ Suite * faults_suite(void) {
 	tcase_add_test(tc, check_io_error);
 	tcase_add_test(tc, check_store_new_oom);
 	tcase_add_test(tc, check_file_store_io_errors);
+	tcase_add_test(tc, check_msg_new_oom);
+	tcase_add_test(tc, check_cert_new_oom);
+	tcase_add_test(tc, check_envelope_new_oom);
 	suite_add_tcase(s, tc);
 
 	return s;

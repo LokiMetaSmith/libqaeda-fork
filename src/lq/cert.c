@@ -35,6 +35,9 @@ LQCert* lq_certificate_new(LQCert *parent) {
 	LQCert *cert;
 
 	cert = lq_alloc(sizeof(LQCert));
+	if (cert == NULL) {
+		return NULL;
+	}
 	lq_zero(cert, sizeof(LQCert));
 	cert->parent = parent;
 

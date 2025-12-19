@@ -10,4 +10,5 @@
 - [x] Implement I/O error simulation hooks in `lq_open`, `lq_read`, `lq_write`.
 - [x] Create `test_faults.c` to verify library behavior under simulated faults.
 - [x] Integrate new tests into the build system.
+- [x] Add OOM coverage for core objects (`LQMsg`, `LQCert`, `LQEnvelope`).
 - [ ] Run coverage analysis to identify remaining untested branches.
