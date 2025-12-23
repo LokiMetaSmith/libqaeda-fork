@@ -61,6 +61,14 @@ void* lq_zero(void *dst, size_t len);
 int lq_cmp(const void *dst, const void *src, size_t len);
 
 /**
+ * \brief Length of string in characters.
+ *
+ * \param[in] String to calculate.
+ * \return Size of string in bytes.
+ */
+size_t lq_len(const char *s);
+
+/**
  * @brief Configure OOM simulation.
  *
  * @param[in] countdown Number of successful allocations before failure.

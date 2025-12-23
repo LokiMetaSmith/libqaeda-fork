@@ -173,6 +173,14 @@ LQPrivKey* lq_privatekey_new(const char *passphrase, size_t passphrase_len);
 LQPrivKey* lq_privatekey_load(const char *passphrase, size_t passphrase_len, const char *fingerprint);
 
 /**
+ * \brief Check if private key exists in store.
+ *
+ * \param[in] If not NULL, the private key matching the fingerprint will be loaded. If not, a "default" key will be checked.
+ * \return ERR_OK if exists, ERR_NOKEY if not.
+ */
+int lq_privatekey_exist(const char *fingerprint);
+
+/**
  * \brief Get the raw private key bytes.
  * 
  * \param[in] Private key object.
@@ -216,7 +224,7 @@ size_t lq_publickey_bytes(LQPubKey *pubk, char **out);
  * \brief Get the public key fingerprint bytes.
  *
  * \param[in] Public key object
- * \param[out] Pointer to start of data to write to. Buffer must have a capacity of at least LQ_PUBKEY_LEN bytes.
+ * \param[out] Pointer to assign to. The pointer value will be valid until the public key object is freed.
  * \return Length of fingerprint data. If 0, no fingerprint could be found.
  */
 size_t lq_publickey_fingerprint(LQPubKey *pubk, char **out);

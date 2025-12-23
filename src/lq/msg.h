@@ -13,6 +13,8 @@ enum lq_msgstate_e {
 	LQ_MSG_LITERAL = 4,
 };
 
+const static int LQ_TIMESTAMP_LEN = 8;
+
 /**
  * \struct LQMsg
  *
@@ -123,7 +125,15 @@ int lq_msg_deserialize(LQMsg **msg, LQResolve *resolve, const char *in, size_t i
 int lq_msg_literal(LQMsg *msg);
 
 /**
+ *
+ */
+int lq_msg_mat(LQMsg *msg, const char *salt, const char *extra, size_t extra_len, char *out);
+
+
+/**
  * \brief Free an instantiated message.
+ *
+ * Also frees the associates public key
  *
  * \param[in] Message to free.
  */

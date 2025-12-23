@@ -12,6 +12,13 @@
 #define LQ_CERT_DOMAIN_LEN 8
 #endif
 
+enum lq_certificate_state_e {
+	CERT_NONE = 0,
+	CERT_REQUEST = 1,
+	CERT_RESPONSE = 2,
+	CERT_CHAIN = 4,
+};
+
 /**
  * \struct LQCert
  *
@@ -26,8 +33,9 @@ struct lq_certificate_t {
 	LQSig *request_sig; ///< Signature over a request message and the linked certificate. If the linked certificate is NULL, the certificate data used in the signature with be a LQ_DIGEST_LEN string with all bytes set to 0.
 	LQMsg *response; ///< A response message encapsulates an arbitrary string of data that confirms a request. This field must be NULL unless a signed requests exists.
 	LQSig *response_sig; ///< Signature over a response message. This field must be NULL unless a response message is set. The signature is calculated over both the response and the signed request.
-	LQCert *parent; ///< Link to previous certificate. Optional. Set to NULL if no link exists.
 	char parent_hash[LQ_DIGEST_LEN];
+	LQCert *parent; ///< Link to previous certificate. Optional. Set to NULL if no link exists.
+	LQResolve *resolve; ///< Optional store implementation to resolve message hashes to content.
 };
 
 /**
@@ -51,6 +59,11 @@ LQCert* lq_certificate_new(LQCert *parent);
 void lq_certificate_set_domain(LQCert *cert, const char *domain);
 
 /**
+ * \brief Receive the message signature material for the current state of the certificate.
+ */
+char* lq_certificate_mat(const LQCert *cert, const LQPubKey *pubk, char *out);
+
+/**
  * \brief Sign the next pending message in the certificate.
  *
  * If the request message is set but not signed, the request message will be signed. If the response message is set but not signed, the response message will be signed. The limitations described in the struct declaration apply.
@@ -66,6 +79,7 @@ void lq_certificate_set_domain(LQCert *cert, const char *domain);
  * If the certificate has the response_signature it will be used as the response_signature value. The response_signature may not exist without the request_signature.
  *
  * \param[in] Instantiated certificate to perform signature on.
+ * \param[in] Store implementations to use for resolving content key from deserialized message and certificate data. If NULL, content will not be resolved.
  * \param[in] Private key to use for signature.
  * \return ERR_OK on successful signature, or:
  * 	* ERR_REQUEST if request has already been signed  (and response is not set)

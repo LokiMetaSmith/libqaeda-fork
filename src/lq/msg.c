@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <string.h>
 #include <time.h>
-#include <libtasn1.h>
 #include <endian.h>
 #include <llog.h>
 
@@ -9,18 +8,33 @@
 #include "lq/mem.h"
 #include "lq/err.h"
 #include "lq/crypto.h"
-#include "lq/wire.h"
 #include "lq/store.h"
+#include "lq/asn.h"
 #include "debug.h"
 
-
-extern asn1_node asn;
 
 extern char zeros[65];
 static LQPubKey nokey = {
 	.pk = NULL,
 	.impl = zeros,
 };
+
+static int timestamp_bytes(LQMsg *msg, char *timedata) {
+	int r;
+
+	lq_cpy(timedata, &msg->time.tv_sec, LQ_TIMESTAMP_LEN);
+	lq_cpy(((char*)timedata)+4, &msg->time.tv_nsec, 4);
+	r = to_endian(TO_ENDIAN_BIG, 4, timedata);
+	if (r) {
+		return ERR_BYTEORDER;
+		//return asn_except(&item, ERR_BYTEORDER);
+	}
+	r = to_endian(TO_ENDIAN_BIG, 4, ((char*)timedata)+4);
+	if (r) {
+		return ERR_BYTEORDER;
+	}
+	return ERR_OK;
+}
 
 LQMsg* lq_msg_new(const char *msg_data, size_t msg_len) {
 	LQMsg *msg;
@@ -59,18 +73,49 @@ LQSig* lq_msg_sign(LQMsg *msg, LQPrivKey *pk, const char *salt) {
 }
 
 static int msg_to_sign(LQMsg *msg, char *out, const char *extra, size_t extra_len) {
+	int r;
 	int l;
-	char data[LQ_BLOCKSIZE];
+	char data[LQ_BLOCKSIZE + LQ_TIMESTAMP_LEN];
+	char *p;
 
+	p = (char*)data;
 	l = msg->len;
 	if (extra_len > 0) {
 		l += extra_len;
-		lq_cpy(data, extra, extra_len);
+		lq_cpy(p, extra, extra_len);
 	}
-	lq_cpy(data + extra_len, msg->data, msg->len);
+	p += extra_len;
+	lq_cpy(p, msg->data, msg->len);
+
+	p += msg->len;
+	r = timestamp_bytes(msg, p);
+	if (r) {
+		return r;
+	}
 
 	return lq_digest(data, l, out);
 }	
+
+/**
+ * \todo DRY with lq_msg_sign_extra
+ */
+int lq_msg_mat(LQMsg *msg, const char *salt, const char *extra, size_t extra_len, char *out) {
+	int r;
+
+	if (extra == NULL) {
+		extra_len = 0;
+	}
+	if (msg->pubkey == NULL) {
+		debug_logerr(LLOG_ERROR, ERR_NOKEY, "public key");
+		return ERR_NOKEY;
+	}
+	r = msg_to_sign(msg, out, extra, extra_len);
+	if (r) {
+		debug_logerr(LLOG_DEBUG, r, "prepare message material");
+		return ERR_ENCODING;
+	}
+	return ERR_OK;
+}
 
 LQSig* lq_msg_sign_extra(LQMsg *msg, LQPrivKey *pk, const char *salt, const char *extra, size_t extra_len) {
 	int r;
@@ -122,123 +167,113 @@ int lq_msg_verify_extra(LQMsg *msg, LQSig *sig, const char *salt, const char *ex
 }
 
 void lq_msg_free(LQMsg *msg) {
+	testcase(msg == NULL);
+	if (msg == NULL) {
+		return;
+	}
+	testcase(msg->data == NULL);
+	lq_free(msg->data);
 	if (msg->pubkey != NULL) {
 		lq_publickey_free(msg->pubkey);
 	}
-	lq_free(msg->data);
 	lq_free(msg);
 }
 
-static int asn_except(asn1_node *node, int err) {
-	int r;
-
-	r = asn1_delete_structure(node);
-	if (r != ASN1_SUCCESS) {
-		debug_logerr(LLOG_ERROR, ERR_FAIL, "free msg asn");
-	}
-
-	return err;
-}
 
 /// TODO check upper bound of data contents
 int lq_msg_serialize(LQMsg *msg, LQResolve *resolve, char *out, size_t *out_len) {
 	size_t c;
-	int r;
 	size_t mx;
-	char tmp[LQ_CRYPTO_BUFLEN];
+	int r;
+	char tmp[LQ_BLOCKSIZE];
 	char timedata[8];
 	char err[1024];
 	LQPubKey *pubkey;
 	LQResolve *resolve_active;
-	asn1_node item;
+	LQASN *asn;
 	char *keydata;
 	char v[6];
 
 	mx = *out_len;
 	*out_len = 0;
-	lq_set(&item, 0, sizeof(item));
 
 	msg->state &= ~((char)LQ_MSG_RESOLVED);
-	r = asn1_create_element(asn, "Qaeda", &item);
-	if (r != ASN1_SUCCESS) {
-		return ERR_READ;
+	asn = lq_asn_new("Msg");
+	if (asn == NULL) {
+		return ERR_WRITE;
 	}
 
 	lq_cpy(v, "FALSE", 5);
-	v[5] = 0;
 	if (msg->state & LQ_MSG_LITERAL) {
 		lq_cpy(v, "TRUE", 5);
 		v[4] = 0;
 	}
-	r = asn1_write_value(item, "Msg.literal", v, strlen(v) + 1);
-	if (r != ASN1_SUCCESS) {
-		return asn_except(&item, ERR_WRITE);
+	r = lq_asn_write(asn, "literal", v, strlen(v) + 1);
+	if (r != ERR_OK) {
+		return r;
 	}
 
 	*out_len = 1;
-
-	if (msg->state & LQ_MSG_INIT) {
-		if (msg->state & LQ_MSG_LITERAL) {
-			lq_cpy(tmp, msg->data, msg->len);
-			c = msg->len;
-			*out_len += c;
-			if (*out_len > mx) {
-				return asn_except(&item, ERR_OVERFLOW);
-			}
-		} else {
-			c = LQ_DIGEST_LEN;
-			*out_len += c;
-			if (*out_len > mx) {
-				return asn_except(&item, ERR_OVERFLOW);
-			}
-			r = lq_digest(msg->data, msg->len, tmp);
-			if (r != ERR_OK) {
-				return asn_except(&item, r);
-			}
-
-			resolve_active = resolve;
-			while (resolve_active != NULL) {
-				r = resolve_active->store->put(LQ_CONTENT_MSG, resolve_active->store, tmp, &c, msg->data, msg->len);
-				if (r != ERR_OK) {
-					return asn_except(&item, r);
-				}
-				resolve_active = resolve_active->next;
-				msg->state |= LQ_MSG_RESOLVED;
-			}
-			if (!(msg->state & LQ_MSG_RESOLVED)) {
-				debug(LLOG_DEBUG, "msg", "no resolver");	
-			}
+	if (msg->state & LQ_MSG_LITERAL) {
+		if (msg->len > LQ_BLOCKSIZE) {
+			lq_asn_free(asn);
+			return ERR_OVERFLOW;
+		}
+		lq_cpy(tmp, msg->data, msg->len);
+		c = msg->len;
+		*out_len += c;
+		if (*out_len > mx) {
+			lq_asn_free(asn);
+			return ERR_OVERFLOW;
 		}
 	} else {
-		tmp[0] = 0;
+		c = LQ_DIGEST_LEN;
+		*out_len += c;
+		if (*out_len > mx) {
+			lq_asn_free(asn);
+			return ERR_OVERFLOW;
+		}
+		r = lq_digest(msg->data, msg->len, tmp);
+		if (r != ERR_OK) {
+			lq_asn_free(asn);
+			return r;
+		}
+
+		resolve_active = resolve;
+		while (resolve_active != NULL) {
+			r = resolve_active->store->put(LQ_CONTENT_MSG, resolve_active->store, tmp, &c, msg->data, msg->len);
+			if (r != ERR_OK) {
+				lq_asn_free(asn);
+				return r;
+			}
+			resolve_active = resolve_active->next;
+			msg->state |= LQ_MSG_RESOLVED;
+		}
+	}
+
+	if (c == 0) {
 		c = 1;
 	}
 
-	r = asn1_write_value(item, "Msg.data", tmp, c);
-	if (r != ASN1_SUCCESS) {
-		return asn_except(&item, ERR_WRITE);
+	r = lq_asn_write(asn, "data", tmp, c);
+	if (r != ERR_OK) {
+		return r;
 	}
 
-
-	lq_cpy(timedata, &msg->time.tv_sec, 4);
-	lq_cpy(((char*)timedata)+4, &msg->time.tv_nsec, 4);
-	r = to_endian(TO_ENDIAN_BIG, 4, timedata);
-	if (r) {
-		return asn_except(&item, ERR_BYTEORDER);
-	}
-	r = to_endian(TO_ENDIAN_BIG, 4, ((char*)timedata)+4);
-	if (r) {
-		return asn_except(&item, ERR_BYTEORDER);
+	r = timestamp_bytes(msg, timedata);
+	if (r != ERR_OK) {
+		return ERR_BYTEORDER;
 	}
 
-	c = sizeof(int);
+	c = sizeof(LQ_TIMESTAMP_LEN);
 	*out_len += c;
 	if (*out_len > mx) {
-		return asn_except(&item, ERR_OVERFLOW);
+		lq_asn_free(asn);
+		return ERR_OVERFLOW;
 	}
-	r = asn1_write_value(item, "Msg.timestamp", &timedata, c);
-	if (r != ASN1_SUCCESS) {
-		return asn_except(&item, ERR_WRITE);
+	r = lq_asn_write(asn, "timestamp", (char*)&timedata, c);
+	if (r != ERR_OK) {
+		return r;
 	}
 
 	pubkey = msg->pubkey;
@@ -248,24 +283,21 @@ int lq_msg_serialize(LQMsg *msg, LQResolve *resolve, char *out, size_t *out_len)
 	c = lq_publickey_bytes(pubkey, &keydata);
 	*out_len += c;
 	if (*out_len > mx) {
-		return asn_except(&item, ERR_OVERFLOW);
+		lq_asn_free(asn);
+		return ERR_OVERFLOW;
 	}
-	r = asn1_write_value(item, "Msg.pubkey", keydata, c);
-	if (r != ASN1_SUCCESS) {
-		return asn_except(&item, ERR_WRITE);
+	r = lq_asn_write(asn, "pubkey", keydata, c);
+	if (r != ERR_OK) {
+		return r;
 	}
 
 	*out_len = mx;
-	r = asn1_der_coding(item, "Msg", out, (int*)out_len, err);
-	if (r != ASN1_SUCCESS) {
-		debug_logerr(LLOG_WARNING, ERR_ENCODING, (char*)asn1_strerror(r));
-		return asn_except(&item, ERR_ENCODING);
-	}
-
-	r = asn1_delete_structure(&item);
-	if (r != ASN1_SUCCESS) {
+	r = lq_asn_out(asn, out, out_len);
+	if (r != ERR_OK) {
 		return r;
 	}
+
+	lq_asn_free(asn);
 
 	return ERR_OK;
 }
@@ -282,44 +314,37 @@ int lq_msg_deserialize(LQMsg **msg, LQResolve *resolve, const char *in, size_t i
 	char tmp[LQ_BLOCKSIZE];
 	char z[LQ_DIGEST_LEN];
 	char msg_state;
-	asn1_node item;
+	LQASN *asn;
 	LQResolve *resolve_active;
 
 	resolved = 0;
 	msg_state = 0;
 
-	lq_zero(&item, sizeof(item));
-
-	r = asn1_create_element(asn, "Qaeda.Msg", &item);
-	if (r != ASN1_SUCCESS) {
+	asn = lq_asn_parse("Msg", in, in_len);
+	if (asn == NULL) {
 		return ERR_READ;
 	}
 
-	r = asn1_der_decoding(&item, in, in_len, err);
-	if (r != ASN1_SUCCESS) {
-		return asn_except(&item, ERR_ENCODING);
+	c = 6;
+	r = lq_asn_read(asn, "literal", tmp, &c);
+	if (r != ERR_OK) {
+		return r;
 	}
 
-	c = 6;
-	r = asn1_read_value(item, "literal", tmp, (int*)&c);
-	if (r != ASN1_SUCCESS) {
-		debug_logerr(LLOG_WARNING, ERR_READ, (char*)asn1_strerror(r));
-		return asn_except(&item, ERR_READ);
-	}
 	if (lq_cmp(tmp, "F", 1)) {
 		msg_state |= LQ_MSG_LITERAL;
 	}
 
 	c = LQ_BLOCKSIZE;
-	r = asn1_read_value(item, "data", tmp, (int*)&c);
-	if (r != ASN1_SUCCESS) {
-		debug_logerr(LLOG_WARNING, ERR_READ, (char*)asn1_strerror(r));
-		return asn_except(&item, ERR_READ);
+	r = lq_asn_read(asn, "data", tmp, &c);
+	if (r != ERR_OK) {
+		return r;
 	}
 
 	if (c == 1) {
 		debug(LLOG_DEBUG, "msg", "empty message");
 		*msg = NULL;
+		lq_asn_free(asn);
 		return ERR_OK;
 	}
 
@@ -331,7 +356,8 @@ int lq_msg_deserialize(LQMsg **msg, LQResolve *resolve, const char *in, size_t i
 		while (resolve_active != NULL) {
 			r = resolve_active->store->get(LQ_CONTENT_MSG, resolve_active->store, z, LQ_DIGEST_LEN, tmp, &c);
 			if (r != ERR_OK) {
-				return asn_except(&item, r);
+				lq_asn_free(asn);
+				return r;
 			}
 			resolve_active = resolve_active->next;
 			resolved = LQ_MSG_RESOLVED;
@@ -345,39 +371,36 @@ int lq_msg_deserialize(LQMsg **msg, LQResolve *resolve, const char *in, size_t i
 
 	*msg = lq_msg_new((const char*)tmp, c);
 	if (*msg == NULL) {
-		return asn_except(&item, ERR_MEM);
+		lq_asn_free(asn);
+		return ERR_MEM;
 	}
 	(*msg)->state = msg_state | resolved;
 
 	/// \todo document timestamp size
 	c = 8;
-	r = asn1_read_value(item, "timestamp", tmp, (int*)&c);
-	if (r != ASN1_SUCCESS) {
-		return asn_except(&item, ERR_READ);
+	r = lq_asn_read(asn, "timestamp", tmp, &c);
+	if (r != ERR_OK) {
+		return r;
 	}
 	if (is_le()) {
 		flip_endian(4, (char*)tmp);
 		flip_endian(4, ((char*)tmp)+4);
 	}
-	lq_cpy(&((*msg)->time.tv_sec), tmp, 4);
 	lq_cpy(&((*msg)->time.tv_nsec), ((char*)tmp)+4, 4);
 
 	c = LQ_PUBKEY_LEN;
-	r = asn1_read_value(item, "pubkey", tmp, (int*)&c);
-	if (r != ASN1_SUCCESS) {
-		return asn_except(&item, ERR_READ);
+	r = lq_asn_read(asn, "pubkey", tmp, &c);
+	if (r = ERR_OK) {
+		return r;
 	}
 
 	(*msg)->pubkey = lq_publickey_new(tmp);
 	if ((*msg)->pubkey == NULL) {
-		return asn_except(&item, ERR_NOKEY);
+		lq_asn_free(asn);
+		return ERR_NOKEY;
 	}
 
-	r = asn1_delete_structure(&item);
-	if (r != ASN1_SUCCESS) {
-		debug(LLOG_WARNING, "msg", "delete msg asn item");
-		return ERR_FAIL;
-	}
+	lq_asn_free(asn);
 
 	return ERR_OK;
 }
