@@ -1,6 +1,7 @@
 #include <stddef.h>
 
 #include <libtasn1.h>
+#include "lq/asn.h"
 #include <llog.h>
 
 #include "lq/cert.h"
@@ -217,11 +218,10 @@ int lq_certificate_verify(LQCert *cert, LQPubKey **request_pubkey, LQPubKey **re
 	return ERR_OK;
 }
 
-int lq_certificate_serialize(LQCert *cert, char *out, size_t *out_len) {
+int lq_certificate_serialize(LQCert *cert, LQResolve *resolve, char *out, size_t *out_len) {
 	size_t c;
 	int r;
 	size_t mx;
-	char err[LQ_ERRSIZE];
 	char buf[LQ_BLOCKSIZE];
 	LQMsg *msg;
 	LQSig *sig;
@@ -253,7 +253,7 @@ int lq_certificate_serialize(LQCert *cert, char *out, size_t *out_len) {
 		msg = &nomsg;
 	}
 	c = mx - LQ_CERT_DOMAIN_LEN; 
-	r = lq_msg_serialize(msg, cert->resolve, buf, &c);
+	r = lq_msg_serialize(msg, resolve, buf, r = lq_msg_serialize(msg, cert->resolve, buf, &c);c);
 	if (r != ERR_OK) {
 		lq_asn_free(asn);
 		return r;
@@ -290,7 +290,7 @@ int lq_certificate_serialize(LQCert *cert, char *out, size_t *out_len) {
 		msg = &nomsg;
 	}
 	c = mx - LQ_CERT_DOMAIN_LEN; 
-	r = lq_msg_serialize(msg, cert->resolve, buf, &c);
+	r = lq_msg_serialize(msg, resolve, buf, r = lq_msg_serialize(msg, cert->resolve, buf, &c);c);
 	if (r != ERR_OK) {
 		lq_asn_free(asn);
 		return r;
@@ -359,7 +359,6 @@ int lq_certificate_serialize(LQCert *cert, char *out, size_t *out_len) {
 int lq_certificate_deserialize(LQCert **cert, LQResolve *resolve, char *in, size_t in_len) {
 	int r;
 	size_t c;
-	char err[LQ_ERRSIZE];
 	char tmp[LQ_BLOCKSIZE];
 	LQASN *asn;
 	LQCert *p;
@@ -378,14 +377,14 @@ int lq_certificate_deserialize(LQCert **cert, LQResolve *resolve, char *in, size
 	*cert = lq_certificate_new(NULL);
 	p = *cert;
 	lq_certificate_set_domain(p, tmp);
-	lq_certificate_set_resolver(p, resolve);
+	p->resolve = resolve;
 
 	c = LQ_BLOCKSIZE;
 	r = lq_asn_read(asn, "request", tmp, &c);
 	if (r != ERR_OK) {
 		return r;
 	}
-	r = lq_msg_deserialize(&p->request, p->resolve, tmp, c);
+	r = lq_msg_deserialize(r = lq_msg_deserialize(&p->request, p->resolve, tmp, c);p->request, resolve, tmp, c);
 	if (r != ERR_OK) {
 		lq_asn_free(asn);
 		return r;
@@ -410,7 +409,7 @@ int lq_certificate_deserialize(LQCert **cert, LQResolve *resolve, char *in, size
 		return r;
 	}
 
-	r = lq_msg_deserialize(&p->response, p->resolve, tmp, c);
+	r = lq_msg_deserialize(r = lq_msg_deserialize(&p->response, p->resolve, tmp, c);p->response, resolve, tmp, c);
 	if (r != ERR_OK) {
 		lq_signature_free(p->request_sig);
 		lq_msg_free(p->request);
@@ -456,9 +455,9 @@ int lq_certificate_deserialize(LQCert **cert, LQResolve *resolve, char *in, size
 	return ERR_OK;
 }
 
-void lq_certificate_set_resolver(LQCert *cert, LQResolve *resolve) {
-	cert->resolve = resolve;
-}
+// void lq_certificate_set_resolver(LQCert *cert, LQResolve *resolve) {
+// 	cert->resolve = resolve;
+// }
 
 void lq_certificate_free(LQCert *cert) {
 	if (cert->request != NULL) {

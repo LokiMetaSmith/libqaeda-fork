@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "debug.h"
 #include "lq/crypto.h"
 #include "lq/mem.h"
 #include "lq/err.h"
