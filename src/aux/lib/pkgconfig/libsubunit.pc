@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: subunit
+Description: Subunit test protocol library.
+URL: http://launchpad.net/subunit
+Version: 1.4.2
+Libs: -L${libdir} -lsubunit
+Cflags: -I${includedir}

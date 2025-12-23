@@ -128,7 +128,7 @@ int lq_envelope_serialize(LQEnvelope *env, LQResolve *resolve, char *out, size_t
 	}
 
 	c = mx - sizeof(int);
-	r = lq_certificate_serialize(env->cert, buf, &c);
+	r = lq_certificate_serialize(env->cert, resolve, buf, r = lq_certificate_serialize(env->cert, buf, &c);c);
 	if (r != ERR_OK) {
 		lq_asn_free(asn);
 		return r;

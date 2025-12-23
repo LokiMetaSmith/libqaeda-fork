@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "debug.h"
 #include "lq/err.h"
 #include "lq/mem.h"
 #include "lq/config.h"
