@@ -1,5 +1,5 @@
 INCLUDES := -I. -I./aux/include
-CFLAGS +=  $(INCLUDES) -Wall -DRERR
+CFLAGS +=  $(INCLUDES) -Wall -DRERR -O2
 #LIBOBJFILES = ./asn1/*.o ./*.o ./lq/*.o ./store/file.o ./mem/std.o ./io/std.o ./crypto/gcrypt.o
 LIBOBJFILES = ./asn1/*.o ./*.o ./lq/*.o ./store/file.o ./mem/std.o ./io/std.o ./crypto/gcrypt.o ./aux/hashmap.c/hashmap.o ./aux/liblash/src/rerr/*.o ./aux/liblash/src/llog/*.o ./aux/liblash/src/endian/*.o ./aux/liblash/src/hex/*.o  ./aux/liblash/src/case/*.o ./aux/cwalk/build/CMakeFiles/cwalk.dir/src/cwalk.c.o
 
@@ -15,9 +15,9 @@ dev-lib: all
 	ar rcs libqaeda.a $(LIBOBJFILES)
 	#libtool --mode=link --tag=CC $(CC) -static -o libqaeda.a liblq.a ./aux/lib/liblash.a ./aux/lib/libcwalk.a
 
-test-lib:
+test-lib: dev-lib
 
-core: dummy
+core: aux asn1
 	$(CC) $(CFLAGS) -c debug.c
 	make -C lq
 
@@ -27,7 +27,10 @@ aux:
 asn1:
 	make -C asn1 all
 
-gpg: std
+gpg: core
+	make -C mem std
+	make -C io std
+	make -C store dummy
 	make -C crypto gpg
 
 gpg-shared:
@@ -39,7 +42,7 @@ std:
 	make -C store dummy
 	make -C lq
 
-dummy:
+dummy: core
 	make -C crypto dummy
 	make -C mem std
 	make -C io std
