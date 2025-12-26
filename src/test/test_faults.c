@@ -14,6 +14,7 @@
 #include "lq/envelope.h"
 #include "lq/config.h"
 #include "lq/crypto.h"
+#include "lq/err.h"
 
 START_TEST(check_oom_allocation) {
 	void *ptr;

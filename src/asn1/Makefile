@@ -5,17 +5,19 @@ CFLAGS +=  $(INCLUDES) -Wall
 
 all: compile dynamic
 
-src:
+generate_asn1: generate.c
 	$(CC) $(CFLAGS) generate.c -o generate_asn1 $(LDFLAGS)
+
+tasn.o: tasn.c
 	$(CC) $(CFLAGS) -fPIC -c tasn.c -o tasn.o $(LDFLAGS)
 
-%.o: %_asn1_tab.c
-	$(CC) $< -o $* $(LDFLAGS)
-
-compile: generate defs_asn1_tab.o
-
-generate: src
+defs_asn1_tab.c: generate_asn1
 	./generate_asn1
+
+defs_asn1_tab.o: defs_asn1_tab.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+compile: defs_asn1_tab.o tasn.o
 
 clean:
 	rm -vf *.o

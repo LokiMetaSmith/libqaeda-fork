@@ -6,7 +6,7 @@ LIBS := ../asn1/defs_asn1_tab.o -L../aux/lib -llash
 LDFLAGS += $(LIBS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 all: $(OBJS)
 
