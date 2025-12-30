@@ -7,8 +7,8 @@ LIBOBJEMBED = ./asn1/*.o ./*.o ./lq/*.o ./store/file.o ./mem/std.o ./io/std.o ./
 LIBS := `pkg-config --libs libtasn1 libgcrypt` -L./aux/lib -llash -lcwalk
 
 all: all-gpg
-all-dummy: asn1 aux core dummy
-all-gpg: asn1 aux core gpg
+all-dummy: dummy
+all-gpg: gpg
 
 dev-lib: all
 	#ar rcs liblq.a lq/config.o crypto/gcrypt.o store/file.o mem/std.o io/std.o debug.o aux/lib/libhashmap.a 
@@ -27,29 +27,40 @@ aux:
 asn1:
 	make -C asn1 all
 
-gpg: core
+# Parallelized gpg target
+gpg: mem_std io_std store_dummy crypto_gpg
+
+# Parallelized dummy target
+dummy: crypto_dummy mem_std io_std store_dummy
+
+# Dependencies for parallel targets
+mem_std: core
 	make -C mem std
+
+io_std: core
 	make -C io std
+
+store_dummy: core
 	make -C store dummy
+
+crypto_gpg: core
 	make -C crypto gpg
+
+crypto_dummy: core
+	make -C crypto dummy
 
 gpg-shared:
 	make -C crypto gpg-shared
 
-std:
-	make -C mem std
-	make -C io std
-	make -C store dummy
+std: mem_std io_std store_dummy
 	make -C lq
-
-dummy: core
-	make -C crypto dummy
-	make -C mem std
-	make -C io std
-	make -C store dummy
 
 test: all test-lib 
 	make -C test
+
+coverage: export CFLAGS += -fprofile-arcs -ftest-coverage -DCOVERAGE_TEST
+coverage: clean all test-lib
+	make -C test coverage
 
 clean:
 	make -C asn1 clean
@@ -71,4 +82,4 @@ shared:
 #	$(CC) $(CFLAGS) -shared -o libqaeda.so libqaeda.a
 			
 
-.PHONY: clean asn1 aux
+.PHONY: clean asn1 aux core mem_std io_std store_dummy crypto_gpg crypto_dummy coverage

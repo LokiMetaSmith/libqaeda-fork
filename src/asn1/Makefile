@@ -12,7 +12,7 @@ tasn.o: tasn.c
 	$(CC) $(CFLAGS) -fPIC -c tasn.c -o tasn.o $(LDFLAGS)
 
 defs_asn1_tab.c: generate_asn1
-	./generate_asn1
+	if [ -x ./generate_asn1 ]; then ./generate_asn1; else echo "Skipping generation (tool missing)"; fi
 
 defs_asn1_tab.o: defs_asn1_tab.c
 	$(CC) $(CFLAGS) -c $< -o $@

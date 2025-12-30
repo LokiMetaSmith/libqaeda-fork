@@ -5,9 +5,28 @@ CFLAGS += $(INCLUDES) -Wall -g3
 LIBS := -L.. -L../aux/lib -lqaeda -lhashmap $(shell pkg-config --libs libtasn1 libgcrypt) -lgpg-error
 LDFLAGS := -lcheck -lsubunit -lm $(LIBS)
 
+TEST_SRCS := test_test.c test_debug.c test_config.c test_crypto.c test_msg.c test_cert.c test_envelope.c test_trust.c test_store.c test_query.c test_faults.c
+TEST_BINS := $(TEST_SRCS:.c=_bin)
+
 coverage: CFLAGS += -fprofile-arcs -ftest-coverage -DCOVERAGE_TEST
 coverage: LDFLAGS += -fprofile-arcs -ftest-coverage
-coverage: build all-tests
+coverage: build all-tests coverage-report
+
+coverage-report:
+	@echo "------------------------------------------------------------------------------"
+	@echo "                           Coverage Summary                                   "
+	@echo "------------------------------------------------------------------------------"
+	@echo "File                                       Lines Exec  Lines Total  Coverage"
+	@echo "------------------------------------------------------------------------------"
+	@for file in ../lq/*.c ../store/*.c ../crypto/*.c ../io/*.c ../mem/*.c; do \
+		gcov -n -o .. $${file} > /dev/null 2>&1; \
+		gcov_file=$$(basename $${file}).gcov; \
+		if [ -f $$gcov_file ]; then \
+			awk -v fname=$$(basename $${file}) '/Lines executed:/ { printf "%-40s %10s %12s %9s\n", fname, $$2, $$4, $$2 }' $$gcov_file | sed 's/%//g' | awk '{ printf "%-40s %10d %12d %8.2f%%\n", $$1, $$2/100*$$3, $$3, $$2 }'; \
+			rm $$gcov_file; \
+		fi \
+	done
+	@echo "------------------------------------------------------------------------------"
 
 all: build all-tests
 #all: build one-test
@@ -31,24 +50,44 @@ one-test: build
 
 test: all
 
-build:
-	#$(CC) $(CFLAGS) test_test.c -o test_test_bin $(COMMONOBJS) ../io/dummy.o ../store/mem.o $(LDFLAGS) 
-	#$(CC) $(CFLAGS) test_test.c -o test_test_bin $(COMMONOBJS) ../io/std.o ../store/file.o $(LDFLAGS) 
-	$(CC) $(CFLAGS) test_test.c -o test_test_bin $(LDFLAGS)
-	$(CC) $(CFLAGS) test_debug.c -o test_debug_bin $(LDFLAGS)
-	$(CC) $(CFLAGS) test_config.c -o test_config_bin $(LDFLAGS)
-	#$(CC) $(CFLAGS) test_crypto.c -o test_crypto_bin $(COMMONOBJS)  ../store/file.o ../io/std.o ../crypto/gcrypt.o $(LDFLAGS) -lgcrypt
-	$(CC) $(CFLAGS) test_crypto.c -o test_crypto_bin $(LDFLAGS) -lgcrypt
-	$(CC) $(CFLAGS) test_msg.c -o test_msg_bin ../store/dummy.o $(LDFLAGS) -lgcrypt
-	$(CC) $(CFLAGS) test_cert.c -o test_cert_bin ../store/dummy.o $(LDFLAGS) -lgcrypt
-	$(CC) $(CFLAGS) test_envelope.c -o test_envelope_bin ../store/dummy.o $(LDFLAGS) -lgcrypt
-	$(CC) $(CFLAGS) test_trust.c -o test_trust_bin $(LDFLAGS)
-	$(CC) $(CFLAGS) test_store.c -o test_store_bin $(LDFLAGS) -lgcrypt
-	$(CC) $(CFLAGS) test_query.c -o test_query_bin $(LDFLAGS) -lgcrypt
-	$(CC) $(CFLAGS) test_faults.c -o test_faults_bin $(LDFLAGS) -lgcrypt
+build: $(TEST_BINS)
+
+test_test_bin: test_test.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+test_debug_bin: test_debug.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+test_config_bin: test_config.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+test_crypto_bin: test_crypto.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) -lgcrypt
+
+test_msg_bin: test_msg.c ../store/dummy.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lgcrypt
+
+test_cert_bin: test_cert.c ../store/dummy.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lgcrypt
+
+test_envelope_bin: test_envelope.c ../store/dummy.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS) -lgcrypt
+
+test_trust_bin: test_trust.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+test_store_bin: test_store.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) -lgcrypt
+
+test_query_bin: test_query.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) -lgcrypt
+
+test_faults_bin: test_faults.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) -lgcrypt
 
 clean:
 	rm -vf test_*_bin
 	rm -vf *.o
+	rm -vf *.gcno *.gcda
 
-.PHONY: clean
+.PHONY: clean coverage coverage-report

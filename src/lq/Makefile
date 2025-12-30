@@ -12,5 +12,6 @@ all: $(OBJS)
 
 clean:
 	rm -vf *.o
+	rm -vf *.gcno *.gcda
 
 .PHONY: clean
